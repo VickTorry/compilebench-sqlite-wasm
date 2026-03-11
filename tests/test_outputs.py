@@ -1,6 +1,7 @@
 """
 Tests that verify SQLite has been compiled to WebAssembly correctly.
 """
+import glob
 import os
 import subprocess
 
@@ -111,7 +112,12 @@ initSqlite().then(SQL => {
     with open("/tmp/run_sqlite_wasm.js", "w") as f:
         f.write(test_script)
 
-    node_bin = "/workdir/emsdk/node/22.16.0_64bit/bin/node"
+    # Find node binary inside emsdk, wherever it's installed
+    emsdk_root = os.environ.get("EMSDK", "/workdir/emsdk")
+    matches = glob.glob(os.path.join(emsdk_root, "node", "*", "bin", "node"))
+    if not matches:
+        raise RuntimeError("Could not find node binary inside emsdk. Is Emscripten installed?")
+    node_bin = matches[0]
     result = run_cmd([node_bin, "/tmp/run_sqlite_wasm.js"], timeout=60)
     assert result.returncode == 0, f"WASM execution failed:\n{result.stderr}"
     assert "SQL_RESULT_OK:compilebench_proof" in result.stdout, \
